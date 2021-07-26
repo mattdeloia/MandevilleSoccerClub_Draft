@@ -92,6 +92,7 @@ ui <-
                 
                 
                 tabItem("roster",
+                        downloadButton("downloadData", "Download Data"),
                          dataTableOutput("table")
                          ),
                 
@@ -176,16 +177,27 @@ server <- function(input, output) {
                     group_by(league) %>%
                     mutate(team2 = rank(as.integer(team), ties.method="first"))) %>%
             mutate(team = team2) %>% 
-            select (-team2)  
+            select (-team2) 
             
             })
 
 
+    
     output$table <- renderDataTable(df2() %>% 
                                         filter(league %in% input$league) %>% 
                                         select(team, last_name, first_name, parent_coach) %>% 
                                         arrange(league, team, parent_coach, last_name))
-
+    
+    output$downloadData <- downloadHandler(
+        filename = function(){ 
+            paste("MSC_Roster_2021", "csv", sep=".") 
+        },
+        content=function(file){
+            write_excel_csv(df2() %>% 
+                          filter(league %in% input$league) %>% 
+                          select(team, last_name, first_name, parent_coach) %>% 
+                          arrange(league, team, parent_coach, last_name), file)
+        })
 
     output$teamsummary <- render_gt({
         df2() %>% 
