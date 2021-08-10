@@ -109,8 +109,9 @@ server <- function(input, output) {
                       mutate(player_id = tolower(paste(player_first_name, player_last_name, sep = "" ))) %>%
                       mutate(player_id = gsub(" |[.]|[-]|[']", "", player_id)) %>% 
                       select(player_id, rating)) %>% 
-        mutate(birth_date = as.Date(birth_date, "%m/%d/%Y")) %>% 
-        mutate(birth_year= as.integer(format(birth_date, format="%Y"))) %>% 
+        mutate(birth_date = as.Date(birth_date)) %>% 
+        mutate(birth_year= as.integer(format(birth_date, format="%Y"))) %>%
+        mutate(birth_year = if_else(player_id=="michellecorso", as.integer(2009), birth_year)) %>% 
         mutate(age= round(age_calc(birth_date, enddate = Sys.Date(), units = "months")/12,1)) %>%
         mutate(league = if_else(birth_year >= 2017, "5U",
                                 if_else(birth_year >=2016, "6U",
