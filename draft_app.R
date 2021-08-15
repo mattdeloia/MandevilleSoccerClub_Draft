@@ -34,6 +34,7 @@ ui <-
             menuItem("Team Summary", tabName = "summary", icon = icon("bar-chart-o")),
             menuItem("Roster", tabName = "roster", icon = icon("table")),
             menuItem("Parameters", tabName = "parameters", icon = icon("calculator")),
+            menuItem("Team sizes", tabName = "teamsizes", icon = icon("flag")),
             checkboxGroupInput("league", "Select league", 
                                choices = league),
             fileInput("file_registration", label = "registration file (.csv)"),
@@ -55,31 +56,34 @@ ui <-
                 tabItem("parameters",
                         
                         box(title = "Boys Team Sizes",
-                        numericInput("btarget5U", "5U team size", value = 7),
-                        numericInput("btarget6U", "6U team size", value = 7),
-                        numericInput("btarget7U", "7U team size", value = 7),
+                        numericInput("btarget5U", "5U team size", value = 6),
+                        numericInput("btarget6U", "6U team size", value = 8),
+                        numericInput("btarget7U", "7U team size", value = 8),
                         numericInput("btarget8U", "8U team size", value = 8),
                         numericInput("btarget10U", "10U team size", value = 11),
                         numericInput("btarget12U", "12U team size", value = 13),
-                        numericInput("btarget14U", "14U team size", value = 13)
+                        numericInput("btarget14U", "14U team size", value = 15)
                         ),
                         
                         box(title = "Girls Team Sizes",
-                            numericInput("gtarget5U", "5U team size", value = 7),
-                            numericInput("gtarget6U", "6U team size", value = 7),
-                            numericInput("gtarget7U", "7U team size", value = 7),
+                            numericInput("gtarget5U", "5U team size", value = 6),
+                            numericInput("gtarget6U", "6U team size", value = 8),
+                            numericInput("gtarget7U", "7U team size", value = 8),
                             numericInput("gtarget8U", "8U team size", value = 8),
                             numericInput("gtarget10U", "10U team size", value = 11),
                             numericInput("gtarget12U", "12U team size", value = 13),
-                            numericInput("gtarget14U", "14U team size", value = 13)
+                            numericInput("gtarget14U", "14U team size", value = 15)
                         ),
                         
                         box(title = "Other Team Sizes",
                         
                         numericInput("target19U", "19U team size", value = 13),
                         numericInput("targetAdult", "Adult team size", value = 13)
-                        ))
-                )
+                        )),
+                
+                tabItem("teamsizes",
+                        plotOutput("plot", height = "500px")
+                ))
             )
 )  
 
@@ -95,7 +99,7 @@ server <- function(input, output) {
     df <- reactive({ 
         registration() %>%
         clean_names() %>% 
-        drop_na(player_id) %>% 
+        #drop_na(player_id) %>% 
         rename(last_name=player_last_name, 
                first_name=player_first_name,
                parent_email=account_email,
@@ -109,9 +113,9 @@ server <- function(input, output) {
                       mutate(player_id = tolower(paste(player_first_name, player_last_name, sep = "" ))) %>%
                       mutate(player_id = gsub(" |[.]|[-]|[']", "", player_id)) %>% 
                       select(player_id, rating)) %>% 
-        mutate(birth_date = as.Date(birth_date)) %>% 
+        mutate(birth_date = as.Date(birth_date, "%m/%d/%Y")) %>% 
         mutate(birth_year= as.integer(format(birth_date, format="%Y"))) %>%
-        mutate(birth_year = if_else(player_id=="michellecorso", as.integer(2009), birth_year)) %>% 
+        mutate(birth_year = if_else(player_id=="travishernedez", as.integer(2009), birth_year)) %>% 
         mutate(age= round(age_calc(birth_date, enddate = Sys.Date(), units = "months")/12,1)) %>%
         mutate(league = if_else(birth_year >= 2017, "5U",
                                 if_else(birth_year >=2016, "6U",
@@ -232,7 +236,22 @@ server <- function(input, output) {
                 columns = everything(),
                 missing_text = "-" ) 
             })
-    }
 
+
+output$plot <- renderPlot ({
+  df2() %>% 
+  separate(league, into = c("x", "league"), sep = "_" ) %>% 
+    mutate(league = factor(league, levels = c("5U", "6U", "7U", "8U", "10U", "12U", "14U", "19U"))) %>%
+  mutate(gender = gsub("F", "Girls", gender)) %>% 
+  mutate(gender = gsub("M", "Boys", gender)) %>% 
+  ggplot(aes(x=team)) +
+  geom_bar(fill="skyblue") +
+  geom_text(aes(label = ..count..), stat = "count", vjust = 1.5, colour = "red")+
+  facet_grid(league~gender, scales="free") +
+    geom_vline(xintercept = c(5,10,15), linetype="dashed", color="darkgray") +
+    scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), limits = c(0,16)) 
+})
+
+}
 # Run the application 
 shinyApp(ui = ui, server = server)
